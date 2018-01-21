@@ -6,15 +6,17 @@ import os
 import signal
 import argh
 import daemon
+import glob
 from daemon import pidfile
 
 WORKDIR = '/tmp'
 PIDFILE = '/tmp/myproc.pid'
 LOGFILE = WORKDIR + '/mylog'
+PATTERN = '/tmp/umb*'
 
 class App:
     "command listener service for remote"
-    def __init__(self, filelogname):
+    def __init__(self, filelogname, pattern):
         logging.basicConfig(filename=filelogname, level=logging.DEBUG)
         logging.debug("created app ...")
         signal.signal(signal.SIGTERM, self.handle)
@@ -25,6 +27,8 @@ class App:
         logging.debug("installer handler for signal: " + str(signal.SIGUSR2))
 
         self.__quit = False 
+        self.__pattern = pattern
+        logging.debug('using pattern \"' + self.__pattern + '\"')
 
     def handle(self, signum, frame):
         logging.debug('catched signal: %d', signum)
@@ -35,6 +39,14 @@ class App:
         logging.debug("started to run " + str(App.__doc__))
         while not self.__quit:
             logging.debug(time.asctime() + ' app running...')
+            try:
+                files = glob.glob(self.__pattern)
+                for file in files:
+                    logging.debug('file : {}'.format(file))
+            except Exception as e:
+                print(e)
+                raise
+
             time.sleep(1)
         logging.debug("finished to run " + str(App.__doc__))
 
@@ -43,7 +55,7 @@ def start():
     "start command listener service"
     with daemon.DaemonContext(working_directory = WORKDIR, pidfile = pidfile.TimeoutPIDLockFile(PIDFILE)):
         # replaces current context with new one running as daemon mode
-        app = App(LOGFILE)
+        app = App(LOGFILE, PATTERN)
         app.run()
 
 def status():
