@@ -13,15 +13,17 @@ PIDFILE = '/tmp/myproc.pid'
 LOGFILE = WORKDIR + '/mylog'
 
 class App:
-    "My simple service"
+    "command listener service for remote"
     def __init__(self, filelogname):
         logging.basicConfig(filename=filelogname, level=logging.DEBUG)
         logging.debug("created app ...")
         signal.signal(signal.SIGTERM, self.handle)
+        logging.debug("installer handler for signal: " + str(signal.SIGTERM))
         signal.signal(signal.SIGINT, self.handle)
+        logging.debug("installer handler for signal: " + str(signal.SIGINT))
         signal.signal(signal.SIGUSR2, self.handle)
+        logging.debug("installer handler for signal: " + str(signal.SIGUSR2))
 
-        logging.debug("installer handler for SIGTERM ...")
         self.__quit = False 
 
     def handle(self, signum, frame):
@@ -30,35 +32,33 @@ class App:
             self.__quit = True
 
     def run(self):
-        logging.debug("started to run app " + str(App.__doc__))
+        logging.debug("started to run " + str(App.__doc__))
         while not self.__quit:
             logging.debug(time.asctime() + ' app running...')
             time.sleep(1)
-        logging.debug("finished to run app " + str(App.__doc__))
+        logging.debug("finished to run " + str(App.__doc__))
 
 
 def start():
-    "starts my service"
-    print('about to start app')
+    "start command listener service"
     with daemon.DaemonContext(working_directory = WORKDIR, pidfile = pidfile.TimeoutPIDLockFile(PIDFILE)):
         # replaces current context with new one running as daemon mode
         app = App(LOGFILE)
         app.run()
 
 def status():
-    "print status of my service"
+    "get status of command listener service"
     pid = pidfile.TimeoutPIDLockFile(PIDFILE).read_pid()
     try:
         os.kill(pid, 0)
-        print('my service is running with pid %d' % pid)
+        print('{} is running with pid {}'.format(App.__doc__, pid))
     except TypeError:
-        print('my service is not running')
+        print('{} is not running'.format(App.__doc__))
     except OSError:
-        print('my service is not running')
+        print('{} is not running'.format(App.__doc__))
 
 def stop():
-    "stops my program service"
-    print('stop the app')
+    "stop command listener service"
     pid = pidfile.TimeoutPIDLockFile(PIDFILE).read_pid()
     try:
         os.kill(pid, signal.SIGTERM)
