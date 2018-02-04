@@ -14,7 +14,7 @@ from daemon import pidfile
 
 
 class Config:
-    """ Read configuration & provice access via member vars """
+    """Read configuration & provice access via member vars"""
     def __init__(self, config):
         self.__config= json.load(open(config))
         self.pidfile = self.__config['service']['pidfile']
@@ -37,7 +37,7 @@ class Config:
         print('passwd = {}'.format(self.passwd))
 
 class FtpClient:
-    """ Simple ftp client to upload the files """
+    """Simple ftp client to upload the files"""
     def __init__(self, hostname, port, user, passwd):
         self.__hostname = hostname
         self.__port = port
@@ -60,7 +60,7 @@ class FtpClient:
 
 
 class App:
-    """ command listener service for remote """
+    """command listener service for remote"""
     def __init__(self, pattern, logfile, ftpclient):
         logging.basicConfig(filename=logfile, level=logging.DEBUG)
         logging.debug('created app ...')
@@ -98,7 +98,7 @@ class App:
 
 
 def start():
-    """ start command listener service """
+    """start command listener service"""
     cfg = Config('remote_config.json')
     cfg.dump()
     with daemon.DaemonContext(working_directory = cfg.workdir, pidfile = pidfile.TimeoutPIDLockFile(cfg.pidfile)):
@@ -107,33 +107,41 @@ def start():
         app.run()
 
 def status():
-    """ get status of command listener service """
+    """get status of command listener service"""
     cfg = Config('remote_config.json')
     cfg.dump()
     pid = pidfile.TimeoutPIDLockFile(cfg.pidfile).read_pid()
+    was_error = 0
     try:
         os.kill(pid, 0)
         print('{} is running with pid {}'.format(App.__doc__, pid))
     except TypeError:
+        was_error = 1
         print('{} is not running'.format(App.__doc__))
     except OSError:
+        was_error = 1
         print('{} is not running'.format(App.__doc__))
+    sys.exit(was_error)
 
 def stop():
-    """ stop command listener service """
+    """stop command listener service"""
     cfg = Config('remote_config.json')
     pid = pidfile.TimeoutPIDLockFile(cfg.pidfile).read_pid()
+    was_error = 0
     try:
         os.kill(pid, signal.SIGTERM)
         time.sleep(1)
         os.kill(pid, signal.SIGKILL)
     except TypeError:
+        was_error = 1
         pass
     except OSError as e:
+        was_error = 1
         print(e)
         "FIXME: if it errors permission denied we have a problem"
         pass
     pidfile.TimeoutPIDLockFile(cfg.pidfile).break_lock()
+    sys.exit(was_error)
     
 if __name__ == "__main__" :
     parser = argh.ArghParser()
