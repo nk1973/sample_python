@@ -15,8 +15,9 @@ from daemon import pidfile
 
 class Config:
     """Read configuration & provice access via member vars"""
+
     def __init__(self, config):
-        self.__config= json.load(open(config))
+        self.__config = json.load(open(config))
         self.pidfile = self.__config['service']['pidfile']
         self.workdir = self.__config['service']['workdir']
         self.logfile = self.__config['service']['logfile']
@@ -36,15 +37,17 @@ class Config:
         print('user = {}'.format(self.user))
         print('passwd = {}'.format(self.passwd))
 
+
 class FtpClient:
     """Simple ftp client to upload the files"""
+
     def __init__(self, hostname, port, user, passwd):
         self.__hostname = hostname
         self.__port = port
         self.__user = user
         self.__passwd = passwd
 
-    def upload_file(self, local_filename, remote_filename, is_tls = True):
+    def upload_file(self, local_filename, remote_filename, is_tls=True):
         try:
             session = ftplib.FTP_TLS()
             session.connect(self.__hostname, self.__port)
@@ -52,8 +55,13 @@ class FtpClient:
             if is_tls:
                 session.prot_p()
             with open(local_filename, 'rb') as file:
-               session.storbinary('STOR ' + remote_filename, file)
-               logging.debug('uploaded local file {} to {}:{}/{}'.format(local_filename, self.__hostname, self.__port, remote_filename))
+                session.storbinary('STOR ' + remote_filename, file)
+                logging.debug(
+                    'uploaded local file {} to {}:{}/{}'.format(
+                        local_filename,
+                        self.__hostname,
+                        self.__port,
+                        remote_filename))
             session.quit()
         except Exception as e:
             logging.warning(e)
@@ -61,6 +69,7 @@ class FtpClient:
 
 class App:
     """command listener service for remote"""
+
     def __init__(self, pattern, logfile, ftpclient):
         logging.basicConfig(filename=logfile, level=logging.DEBUG)
         logging.debug('created app ...')
@@ -69,7 +78,7 @@ class App:
         signal.signal(signal.SIGINT, self.handle)
         logging.debug('installer handler for signal: ' + str(signal.SIGINT))
 
-        self.__quit = False 
+        self.__quit = False
         self.__pattern = pattern
         self.__ftp_client = ftpclient
         logging.debug('using pattern \"' + self.__pattern + '\"')
@@ -101,10 +110,18 @@ def start():
     """start command listener service"""
     cfg = Config('remote_config.json')
     cfg.dump()
-    with daemon.DaemonContext(working_directory = cfg.workdir, pidfile = pidfile.TimeoutPIDLockFile(cfg.pidfile)):
+    with daemon.DaemonContext(working_directory=cfg.workdir, pidfile=pidfile.TimeoutPIDLockFile(cfg.pidfile)):
         # replaces current context with new one running as daemon mode
-        app = App(cfg.pattern, cfg.logfile, FtpClient(cfg.host, cfg.port, cfg.user, cfg.passwd))
+        app = App(
+            cfg.pattern,
+            cfg.logfile,
+            FtpClient(
+                cfg.host,
+                cfg.port,
+                cfg.user,
+                cfg.passwd))
         app.run()
+
 
 def status():
     """get status of command listener service"""
@@ -122,6 +139,7 @@ def status():
         was_error = 1
         print('{} is not running'.format(App.__doc__))
     sys.exit(was_error)
+
 
 def stop():
     """stop command listener service"""
@@ -142,8 +160,9 @@ def stop():
         pass
     pidfile.TimeoutPIDLockFile(cfg.pidfile).break_lock()
     sys.exit(was_error)
-    
-if __name__ == "__main__" :
+
+
+if __name__ == "__main__":
     parser = argh.ArghParser()
     parser.add_commands([start, stop, status])
     parser.dispatch()
