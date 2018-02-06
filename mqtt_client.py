@@ -3,9 +3,11 @@
 import logging
 import json
 import signal
+import time
 import paho.mqtt.client as mqtt
 
 LOGFILE = '/tmp/log'
+SEND_LOGS_TRIGGER = '/tmp/syslog_sendmail.now'
 
 """Read configuration & provice access via member vars"""
 class Config:
@@ -45,7 +47,10 @@ class App:
     def on_push_log(client, userdata, message):
         instance = userdata
         logging.debug('client {} push_log: payload {}'.format(instance.panel_id, message.payload))
-        #FIXME: set send logs flag
+        trigger = open(SEND_LOGS_TRIGGER, 'w')
+        trigger.write('{}'.format(time.time()))
+        logging.debug('written: {}'.format(time.time()))
+        trigger.close()
         return
 
     @staticmethod
