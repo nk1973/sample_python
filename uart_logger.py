@@ -34,8 +34,7 @@ class UartReader:
                     logging.info(data[:-2])
                     got_data = True
                 else:
-                    logging.warning(
-                        '----panel doesnt respond to quasar string')
+                    logging.warning('----no data from uart')
             if not got_data:
                 raise RuntimeError('no data from uart')
         return
@@ -62,8 +61,7 @@ class UartReader:
             elif len(data) > 2:
                 logging.info(data[:-2])
             else:
-                logging.warning(
-                    '----------------------- timeout to read data from uart')
+                logging.warning('---timeout to read data from uart')
         return
 
 
