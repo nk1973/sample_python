@@ -9,10 +9,10 @@ import paho.mqtt.client as mqtt
 LOGFILE = '/tmp/log'
 SEND_LOGS_TRIGGER = '/tmp/syslog_sendmail.now'
 
-"""Read configuration & provice access via member vars"""
-
 
 class Config:
+    """Read application configuration & provide access via member vars"""
+
     def __init__(self, config):
         self.__config = json.load(open(config))
         self.host = self.__config['mqtt_broker']['host']
@@ -25,77 +25,8 @@ class Config:
             self.host, self.port, self.user, self.passwd))
 
 
-"""Mqtt client class"""
-
-
 class App:
-    @staticmethod
-    def on_connect(client, userdata, flags, rc):
-        instance = userdata
-        print(
-            'Connection for client {} returned: {}'.format(
-                instance.panel_id, rc))
-        logging.debug(
-            'Connection for client {} returned: {}'.format(
-                instance.panel_id, rc))
-        return
-
-    def on_disconnect(client, userdata, flags, rc):
-        instance = userdata
-        print(
-            'Connection for client {} returned: {}'.format(
-                instance.panel_id, rc))
-        logging.debug(
-            'Connection for client {} returned: {}'.format(
-                instance.panel_id, rc))
-        return
-
-    @staticmethod
-    def on_message(client, userdata, message):
-        instance = userdata
-        print('client {} got message of topic{}: payload: {}'.format(
-            instance.panel_id, message.topic, message.payload))
-        logging.debug(
-            'client {} got message of topic{}: payload: {}'.format(
-                instance.panel_id,
-                message.topic,
-                message.payload))
-        return
-
-    @staticmethod
-    def on_push_log(client, userdata, message):
-        instance = userdata
-        logging.debug(
-            'client {} push_log: payload {}'.format(
-                instance.panel_id,
-                message.payload))
-        trigger = open(SEND_LOGS_TRIGGER, 'w')
-        trigger.write('{}'.format(time.time()))
-        logging.debug('written: {}'.format(time.time()))
-        trigger.close()
-        return
-
-    @staticmethod
-    def on_open_vpn(client, userdata, message):
-        instance = userdata
-        logging.debug(
-            'client {} open_vpn payload: {}'.format(
-                instance.panel_id,
-                message.payload))
-        # FIXME: open vpn
-        return
-
-    @staticmethod
-    def on_log(client, userdata, level, buf):
-        instance = userdata
-        print('client: {}: {}'.format(instance.panel_id, buf))
-        logging.debug('client: {}: {}'.format(instance.panel_id, buf))
-        return
-
-    def handle(self, signum, frame):
-        logging.debug('catched signal: {}'.format(signum))
-        if signum == signal.SIGTERM or signum == signal.SIGINT:
-            self.__quit = True
+    """Mqtt client class"""
 
     def __init__(self, panel_id, host, port, user, passwd):
         signal.signal(signal.SIGTERM, self.handle)
@@ -107,6 +38,7 @@ class App:
             clean_session=True,
             userdata=self)
         self.client.on_connect = App.on_connect
+        self.client.on_disconnect = App.on_disconnect
         self.client.on_message = App.on_message
         self.client.on_log = App.on_log
         self.client.message_callback_add(
@@ -141,6 +73,58 @@ class App:
             retain=True)
         self.__quit = False
         return
+
+    @staticmethod
+    def on_connect(client, app, flags, rc):
+        logging.debug('client:{} connected: {}'.format(app.panel_id, rc))
+        return
+
+    @staticmethod
+    def on_disconnect(client, app, flags, rc):
+        logging.debug('client:{} disconnect: {}'.format(app.panel_id, rc))
+        return
+
+    @staticmethod
+    def on_message(client, app, msg):
+        logging.debug(
+            'client:{} got msg of topic{}: payload: {}'.format(
+                app.panel_id,
+                msg.topic,
+                msg.payload))
+        return
+
+    @staticmethod
+    def on_push_log(client, app, msg):
+        logging.debug('client:{} push_log: payload {}'.format(
+            app.panel_id,
+            msg.payload))
+        # NOTE: we can use json data to define different log server settings
+        # like host, port, encrypted, user, passwd. But now all this
+        # is hardcoded
+        trigger = open(SEND_LOGS_TRIGGER, 'w')
+        trigger.write('{}'.format(time.time()))
+        logging.debug('written: {}'.format(time.time()))
+        trigger.close()
+        return
+
+    @staticmethod
+    def on_open_vpn(client, app, msg):
+        logging.debug(
+            'client:{} open_vpn payload: {}'.format(
+                app.panel_id,
+                msg.payload))
+        # FIXME: open vpn
+        return
+
+    @staticmethod
+    def on_log(client, app, level, buf):
+        logging.debug('client: {}: {}'.format(app.panel_id, buf))
+        return
+
+    def handle(self, signum, frame):
+        logging.debug('catched signal: {}'.format(signum))
+        if signum == signal.SIGTERM or signum == signal.SIGINT:
+            self.__quit = True
 
     def stop(self):
         self.__quit = True
