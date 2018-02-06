@@ -11,29 +11,9 @@ TIMEOUT_SEC = 5
 UART_PATH = '/dev/ttyUSB1'
 BAUDRATE = 115200
 
-"""reads uart data & saves it to system log"""
-
 
 class UartReader:
-    def __is_in_debug_mode(self, data):
-        return data.count('DEBUG>') > 0 or data.count(
-            'Error: No such command') > 0 or data.count('Enter \'help\'') > 0
-
-    def __quit_debug_mode(self):
-        self.__uart.write('quit\r\n')
-        self.__uart.flush()
-        return
-
-    def __enable_logging(self):
-        self.__uart.write('quasar\r\n')
-        self.__uart.flush()
-        return
-
-    """Constructor
-        path - path of the uart to open
-        baudrate - baudrate to open the uart
-        the_timeout - timeout in seconds to wait for data in read methods
-    """
+    """reads uart data & saves it to system log"""
 
     def __init__(self, path, baudrate, the_timeout):
         self.__uart = serial.Serial(path, baudrate, timeout=the_timeout)
@@ -55,11 +35,23 @@ class UartReader:
                     got_data = True
                 else:
                     logging.warning(
-                        '----------------------- panel doesnt respond to quasar string')
+                        '----panel doesnt respond to quasar string')
             if not got_data:
-                raise RuntimeError(
-                    'didn\'t succeed to read log data from {}'.format(path))
+                raise RuntimeError('no data from uart')
+        return
 
+    def __is_in_debug_mode(self, data):
+        return data.count('DEBUG>') > 0 or data.count(
+            'Error: No such command') > 0 or data.count('Enter \'help\'') > 0
+
+    def __quit_debug_mode(self):
+        self.__uart.write('quit\r\n')
+        self.__uart.flush()
+        return
+
+    def __enable_logging(self):
+        self.__uart.write('quasar\r\n')
+        self.__uart.flush()
         return
 
     def run(self):
